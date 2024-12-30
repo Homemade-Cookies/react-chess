@@ -42,11 +42,11 @@
 
 /* Different themes and piece designs */
 .theme-dark .square.light {
-    background-color: #b58863;
+    background-color: #6b4f3a;
 }
 
 .theme-dark .square.dark {
-    background-color: #6b4f3a;
+    background-color: #b58863;
 }
 
 .theme-classic .piece {

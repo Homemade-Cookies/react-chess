@@ -1,0 +1,18 @@
+{
+    "configurations": [
+      {
+        "type": "msedge",
+        "request": "launch",
+        "name": "Launch React App",
+        "file": "${workspaceFolder}/index.html",
+        "preLaunchTask": "build"
+      }
+    ],
+    "inputs": [
+      {
+        "type": "promptString",
+        "id": "filePath",
+        "description": "Path to your HTML file"
+      }
+    ]
+  }
