@@ -1,0 +1,50 @@
+{
+  "name": "chess-able",
+  "version": "1.0.0",
+  "description": "An interactive chess game with various features.",
+  "main": "script.jsx",
+  "scripts": {
+    "start": "webpack serve --mode development",
+    "build": "webpack --mode production",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
+    "lint": "eslint . --fix"
+  },
+  "browser": {
+    "fs": false
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HomemadeCookies/chess-able.git"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.7.1",
+    "@emotion/styled": "^11.6.0",
+    "@mui/material": "^5.2.0",
+    "@phosphor-icons/react": "^2.1.7",
+    "chess.js": "^1.0.0-beta.8",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.15.5",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-react": "^7.26.3",
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.17.0",
+    "babel-loader": "^8.2.2",
+    "css-loader": "^6.2.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-react": "^7.37.3",
+    "gh-pages": "^6.2.0",
+    "globals": "^15.14.0",
+    "html-webpack-plugin": "^5.3.2",
+    "prettier": "^3.4.2",
+    "style-loader": "^3.2.1",
+    "webpack": "^5.51.1",
+    "webpack-cli": "^4.8.0",
+    "webpack-dev-server": "^4.0.0"
+  }
+}

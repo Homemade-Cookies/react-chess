@@ -1,5 +1,6 @@
 import React from 'react';
-import { ChessPiece } from './ChessPiece';
+import { Card } from '@mui/material';
+import ChessPiece from './ChessPiece';
 
 const CapturedPieces = ({ captured, pieceDesign }) => (
     <Card className={`text-fg contrast p-2 rounded-lg shadow-lg`}>
@@ -23,4 +24,5 @@ const CapturedPieces = ({ captured, pieceDesign }) => (
         </div>
     </Card>
 );
-export { CapturedPieces };
+
+export default CapturedPieces;

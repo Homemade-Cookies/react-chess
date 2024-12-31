@@ -1,4 +1,6 @@
-﻿const ChessPiece = ({ piece, design, isMoving, showNotation }) => {
+import React from 'react';
+
+const ChessPiece = ({ piece, design, isMoving, showNotation }) => {
     if (!piece) return null;
     const pieceSymbols = {
         traditional: {
@@ -39,4 +41,5 @@
         </span>
     );
 };
-export { ChessPiece };
+
+export default ChessPiece;

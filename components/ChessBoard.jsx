@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ChessPiece } from './ChessPiece';
+import ChessPiece from './ChessPiece';
 
 const ChessBoard = ({
     position,
@@ -61,4 +61,5 @@ const ChessBoard = ({
         </div>
     );
 };
-export { ChessBoard };
+
+export default ChessBoard;

@@ -1,14 +1,10 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
 import './style.css';
-import { createRoot } from 'react-dom/client';
+import React, { Component, Suspense, lazy } from 'react';
+import ReactDOM from 'react-dom';
+import PropTypes from 'prop-types';
 import {
     Button,
-    Card,
     Container,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Select,
     MenuItem,
     Switch,
@@ -19,38 +15,46 @@ import {
 } from '@mui/material';
 import { Chess } from 'chess.js';
 import { GearSix, FloppyDisk, ArrowClockwise, DownloadSimple } from '@phosphor-icons/react';
-import { ChessBoard } from './components/ChessBoard';
+import ErrorBoundary from './components/ErrorBoundary';
 
-// Error logging function with more details
-const logError = (error, source, lineno, colno) => {
-    console.error(`Runtime Error: ${error.message} at ${source}:${lineno}:${colno}`, error);
+// Define logError function
+const logError = (error) => {
+    console.error('An error occurred:', error);
 };
 
-// Warning logging function with more details
-const logWarning = (warning, source, lineno, colno) => {
-    console.warn(`Runtime Warning: ${warning.message} at ${source}:${lineno}:${colno}`, warning);
-};
+// Lazy load components with error boundaries
+const Tutorial = lazy(() => import('./components/Tutorial').catch(logError));
+const GameStatus = lazy(() => import('./components/GameStatus').catch(logError));
+const MaterialAdvantageBar = lazy(() => import('./components/MaterialAdvantageBar').catch(logError));
+const CapturedPieces = lazy(() => import('./components/CapturedPieces').catch(logError));
+const ChessBoard = lazy(() => import('./components/ChessBoard').catch(logError));
 
-function App() {
-    const [game, setGame] = useState(new Chess());
-    const [selectedSquare, setSelectedSquare] = useState(null);
-    const [possibleMoves, setPossibleMoves] = useState([]);
-    const [gameStatus, setGameStatus] = useState('In Progress');
-    const [checkSquare, setCheckSquare] = useState(null);
-    const [savedGame, setSavedGame] = useState(null);
-    const [capturedPieces, setCapturedPieces] = useState({ white: [], black: [] });
-    const [showTutorial, setShowTutorial] = useState(true);
-    const [boardTheme, setBoardTheme] = useState('default');
-    const [pieceDesign, setPieceDesign] = useState('traditional');
-    const [showPossibleMoves, setShowPossibleMoves] = useState(true);
-    const [font, setFont] = useState('sans-serif');
-    const [lastMove, setLastMove] = useState(null); // State to store the last move
-    const [floatingCapture, setFloatingCapture] = useState(null); // State for floating capture animation
-    const [showNotation, setShowNotation] = useState(false);
-    const [materialAdvantage, setMaterialAdvantage] = useState(0); // State for material advantage
-    const [anchorEl, setAnchorEl] = useState(null);
+class App extends Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            game: new Chess(),
+            selectedSquare: null,
+            possibleMoves: [],
+            gameStatus: 'In Progress',
+            checkSquare: null,
+            savedGame: null,
+            capturedPieces: { white: [], black: [] },
+            lastMove: null,
+            floatingCapture: null,
+            materialAdvantage: 0,
+            showTutorial: true,
+            boardTheme: 'default',
+            pieceDesign: 'traditional',
+            showPossibleMoves: true,
+            font: 'sans-serif',
+            showNotation: false,
+            anchorEl: null
+        };
+    }
 
-    const getBoardPosition = useCallback(() => {
+    getBoardPosition = () => {
+        const { game } = this.state;
         const position = [];
         for (let i = 8; i > 0; i--) {
             const row = [];
@@ -61,270 +65,335 @@ function App() {
             position.push(row);
         }
         return position;
-    }, [game]);
+    };
 
-    const handleMove = useCallback((square) => {
+    handleMove = (square) => {
+        const { selectedSquare, game, capturedPieces } = this.state;
         if (selectedSquare) {
             try {
                 const move = game.move({ from: selectedSquare, to: square });
-                setSelectedSquare(null);
-                setPossibleMoves([]);
-                setLastMove(move);
-                setGame(new Chess(game.fen()));
+                this.setState({
+                    selectedSquare: null,
+                    possibleMoves: [],
+                    lastMove: move,
+                    game: new Chess(game.fen())
+                });
 
                 if (move.captured) {
-                    setFloatingCapture({ from: move.to, to: move.to });
-                    setTimeout(() => setFloatingCapture(null), 500);
-
-                    setCapturedPieces(prev => {
-                        const color = move.color === 'w' ? 'black' : 'white';
-                        return {
-                            ...prev,
-                            [color]: [...prev[color], move.captured]
-                        };
+                    this.setState({
+                        floatingCapture: { from: move.to, to: move.to },
+                        capturedPieces: {
+                            ...capturedPieces,
+                            [move.color === 'w' ? 'black' : 'white']: [
+                                ...capturedPieces[move.color === 'w' ? 'black' : 'white'],
+                                move.captured
+                            ]
+                        }
                     });
-
-                    const captured = document.querySelector('.captured-pieces');
-                    captured.classList.add('animate-captured');
-                    setTimeout(() => captured.classList.remove('animate-captured'), 500);
+                    setTimeout(() => this.setState({ floatingCapture: null }), 500);
                 }
             } catch (e) {
-                logWarning(e);
-                setSelectedSquare(square);
-                setPossibleMoves(game.moves({ square, verbose: true }).map(move => move.to));
+                logError(e);
+                this.setState({
+                    selectedSquare: square,
+                    possibleMoves: game.moves({ square, verbose: true }).map(move => move.to)
+                });
             }
         } else {
-            setSelectedSquare(square);
-            setPossibleMoves(game.moves({ square, verbose: true }).map(move => move.to));
-        }
-    }, [selectedSquare, game]);
-
-    useEffect(() => {
-        try {
-            if (game.isGameOver()) {
-                if (game.isCheckmate()) setGameStatus('Checkmate');
-                else if (game.isDraw()) setGameStatus('Draw');
-                else if (game.isStalemate()) setGameStatus('Stalemate');
-            } else if (game.inCheck()) {
-                setGameStatus('Check');
-                const kingSquare = Object.keys(game.board()).find(square => {
-                    const piece = game.get(square);
-                    return piece && piece.type === 'k' && piece.color === game.turn();
-                });
-                setCheckSquare(kingSquare);
-            } else {
-                setGameStatus('In Progress');
-                setCheckSquare(null);
-            }
-
-            const pieceValues = { p: 1, r: 5, n: 3, b: 3, q: 9, k: 0 };
-            let whiteAdvantage = 0;
-            let blackAdvantage = 0;
-
-            game.board().forEach(row => {
-                row.forEach(piece => {
-                    if (piece) {
-                        if (piece.color === 'w') whiteAdvantage += pieceValues[piece.type];
-                        else blackAdvantage += pieceValues[piece.type];
-                    }
-                });
+            this.setState({
+                selectedSquare: square,
+                possibleMoves: game.moves({ square, verbose: true }).map(move => move.to)
             });
-
-            setMaterialAdvantage(whiteAdvantage - blackAdvantage);
-        } catch (e) {
-            logError(e);
         }
-    }, [game]);
+    };
 
-    const resetGame = () => {
+    componentDidUpdate(_, prevState) {
+        const { game } = this.state;
+        if (prevState.game !== game) {
+            try {
+                if (game.isGameOver()) {
+                    if (game.isCheckmate()) this.setState({ gameStatus: 'Checkmate' });
+                    else if (game.isDraw()) this.setState({ gameStatus: 'Draw' });
+                    else if (game.isStalemate()) this.setState({ gameStatus: 'Stalemate' });
+                } else if (game.inCheck()) {
+                    this.setState({ gameStatus: 'Check' });
+                    const kingSquare = Object.keys(game.board()).find(square => {
+                        const piece = game.get(square);
+                        return piece && piece.type === 'k' && piece.color === game.turn();
+                    });
+                    this.setState({ checkSquare: kingSquare });
+                } else {
+                    this.setState({ gameStatus: 'In Progress', checkSquare: null });
+                }
+
+                const pieceValues = { p: 1, r: 5, n: 3, b: 3, q: 9, k: 0 };
+                let whiteAdvantage = 0;
+                let blackAdvantage = 0;
+
+                game.board().forEach(row => {
+                    row.forEach(piece => {
+                        if (piece) {
+                            if (piece.color === 'w') whiteAdvantage += pieceValues[piece.type];
+                            else blackAdvantage += pieceValues[piece.type];
+                        }
+                    });
+                });
+
+                this.setState({ materialAdvantage: whiteAdvantage - blackAdvantage });
+            } catch (e) {
+                logError(e);
+            }
+        }
+    }
+
+    resetGame = () => {
         try {
-            setGame(new Chess());
-            setSelectedSquare(null);
-            setPossibleMoves([]);
-            setGameStatus('In Progress');
-            setCheckSquare(null);
-            setCapturedPieces({ white: [], black: [] });
-            setLastMove(null);
+            this.setState({
+                game: new Chess(),
+                selectedSquare: null,
+                possibleMoves: [],
+                gameStatus: 'In Progress',
+                checkSquare: null,
+                capturedPieces: { white: [], black: [] },
+                lastMove: null
+            });
         } catch (e) {
             logError(e);
         }
     };
 
-    const saveGame = () => {
+    saveGame = () => {
         try {
-            setSavedGame({ fen: game.fen(), captured: capturedPieces });
+            const { game, capturedPieces } = this.state;
+            this.setState({ savedGame: { fen: game.fen(), captured: capturedPieces } });
         } catch (e) {
             logError(e);
         }
     };
 
-    const loadGame = () => {
+    loadGame = () => {
         try {
+            const { savedGame } = this.state;
             if (savedGame) {
-                setGame(new Chess(savedGame.fen));
-                setSelectedSquare(null);
-                setPossibleMoves([]);
-                setGameStatus('In Progress');
-                setCheckSquare(null);
-                setCapturedPieces(savedGame.captured);
-                setLastMove(null);
+                this.setState({
+                    game: new Chess(savedGame.fen),
+                    selectedSquare: null,
+                    possibleMoves: [],
+                    gameStatus: 'In Progress',
+                    checkSquare: null,
+                    capturedPieces: savedGame.captured,
+                    lastMove: null
+                });
             }
         } catch (e) {
             logError(e);
         }
     };
 
-    const handleThemeChange = (event) => {
+    handleThemeChange = (event) => {
         try {
-            setBoardTheme(event.target.value);
+            this.setState({ boardTheme: event.target.value });
         } catch (e) {
             logError(e);
         }
     };
 
-    const handleDesignChange = (event) => {
+    handleDesignChange = (event) => {
         try {
-            setPieceDesign(event.target.value);
+            this.setState({ pieceDesign: event.target.value });
         } catch (e) {
             logError(e);
         }
     };
 
-    const handleShowPossibleMovesChange = () => {
+    handleShowPossibleMovesChange = () => {
         try {
-            setShowPossibleMoves(!showPossibleMoves);
+            this.setState(prevState => ({ showPossibleMoves: !prevState.showPossibleMoves }));
         } catch (e) {
             logError(e);
         }
     };
 
-    const handleFontChange = (event) => {
+    handleFontChange = (event) => {
         try {
-            setFont(event.target.value);
+            this.setState({ font: event.target.value });
         } catch (e) {
             logError(e);
         }
     };
 
-    const handleShowNotationChange = () => {
+    handleShowNotationChange = () => {
         try {
-            setShowNotation(!showNotation);
+            this.setState(prevState => ({ showNotation: !prevState.showNotation }));
         } catch (e) {
             logError(e);
         }
     };
 
-    const closeTutorial = () => {
+    closeTutorial = () => {
         try {
-            setShowTutorial(false);
+            this.setState({ showTutorial: false });
         } catch (e) {
             logError(e);
         }
     };
 
-    const handleMenuOpen = (event) => {
-        setAnchorEl(event.currentTarget);
+    handleMenuOpen = (event) => {
+        this.setState({ anchorEl: event.currentTarget });
     };
 
-    const handleMenuClose = () => {
-        setAnchorEl(null);
+    handleMenuClose = () => {
+        this.setState({ anchorEl: null });
     };
 
-    return (
-        <Container className={`font-${font}`} maxWidth="md">
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold mb-4 text-center w-full">♜ Chess ♜</h1>
-                <div className="mt-4">
-                    <label htmlFor="theme-select">Board Theme:</label>
-                    <Select id="theme-select" value={boardTheme} onChange={handleThemeChange}>
-                        <MenuItem value="default">Default</MenuItem>
-                        <MenuItem value="blue">Blue</MenuItem>
-                        <MenuItem value="green">Green</MenuItem>
-                        <MenuItem value="red">Red</MenuItem>
-                    </Select>
-                </div>
-                <div className="mt-4">
-                    <label htmlFor="design-select">Piece Design:</label>
-                    <Select id="design-select" value={pieceDesign} onChange={handleDesignChange}>
-                        <MenuItem value="traditional">Traditional</MenuItem>
-                        <MenuItem value="modern">Modern</MenuItem>
-                    </Select>
-                </div>
-                <div className="mt-8">
-                    <label htmlFor="font-select">Font:</label>
-                    <Select id="font-select" value={font} onChange={handleFontChange}>
-                        <MenuItem value="sans-serif">Sans-serif</MenuItem>
-                        <MenuItem value="serif">Serif</MenuItem>
-                        <MenuItem value="monospace">Monospace</MenuItem>
-                    </Select>
-                </div>
-                <IconButton onClick={handleMenuOpen}>
-                    <GearSix />
-                </IconButton>
-                <Menu
-                    anchorEl={anchorEl}
-                    open={Boolean(anchorEl)}
-                    onClose={handleMenuClose}
-                >
-                    <DropdownMenuItem onClick={resetGame}>
-                        <Button startIcon={<ArrowClockwise />} variant="contained">Reset Game</Button>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={saveGame}>
-                        <Button startIcon={<FloppyDisk />} variant="contained">Save Game</Button>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={loadGame}>
-                        <Button startIcon={<DownloadSimple />} variant="contained">Load Game</Button>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                        <FormControlLabel
-                            control={<Switch checked={showPossibleMoves} onChange={handleShowPossibleMovesChange} />}
-                            label="Show Possible Moves"
-                        />
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                        <FormControlLabel
-                            control={<Switch checked={showNotation} onChange={handleShowNotationChange} />}
-                            label="Show Piece Notation"
-                        />
-                    </DropdownMenuItem>
-                </Menu>
-            </div>
-            {showTutorial && <Tutorial onClose={closeTutorial} />}
-            <div className="flex flex-col gap-4">
-                <GameStatus currentPlayer={game.turn()} gameStatus={gameStatus} />
-                <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
-                    <ChessBoard
-                        position={getBoardPosition()}
-                        onMove={handleMove}
-                        selectedSquare={selectedSquare}
-                        possibleMoves={possibleMoves}
-                        checkSquare={checkSquare}
-                        theme={boardTheme}
-                        pieceDesign={pieceDesign}
-                        showPossibleMoves={showPossibleMoves}
-                        lastMove={lastMove} // Pass last move prop
-                        floatingCapture={floatingCapture} // Pass floating capture prop
-                        showNotation={showNotation}
-                    />
-                </div>
-                <div className="flex flex-col gap-4">
-                    <MaterialAdvantageBar advantage={materialAdvantage} />
-                    <CapturedPieces captured={capturedPieces} pieceDesign={pieceDesign} />
-                </div>
-            </div>
-        </Container>
-    );
+    render() {
+        const {
+            game,
+            selectedSquare,
+            possibleMoves,
+            gameStatus,
+            checkSquare,
+            capturedPieces,
+            lastMove,
+            floatingCapture,
+            materialAdvantage,
+            showTutorial,
+            boardTheme,
+            pieceDesign,
+            showPossibleMoves,
+            font,
+            showNotation,
+            anchorEl
+        } = this.state;
+
+        return (
+            <ErrorBoundary>
+                <Container className={`font-${font}`} maxWidth="md" style={{ height: '100vh' }}>
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl font-bold mb-4 text-center w-full">♜ Chess ♜</h1>
+                        <div className="mt-4">
+                            <label htmlFor="theme-select">Board Theme:</label>
+                            <Select id="theme-select" value={boardTheme} onChange={this.handleThemeChange}>
+                                <MenuItem value="default">Default</MenuItem>
+                                <MenuItem value="blue">Blue</MenuItem>
+                                <MenuItem value="green">Green</MenuItem>
+                                <MenuItem value="red">Red</MenuItem>
+                            </Select>
+                        </div>
+                        <div className="mt-4">
+                            <label htmlFor="design-select">Piece Design:</label>
+                            <Select id="design-select" value={pieceDesign} onChange={this.handleDesignChange}>
+                                <MenuItem value="traditional">Traditional</MenuItem>
+                                <MenuItem value="modern">Modern</MenuItem>
+                            </Select>
+                        </div>
+                        <div className="mt-8">
+                            <label htmlFor="font-select">Font:</label>
+                            <Select id="font-select" value={font} onChange={this.handleFontChange}>
+                                <MenuItem value="sans-serif">Sans-serif</MenuItem>
+                                <MenuItem value="serif">Serif</MenuItem>
+                                <MenuItem value="monospace">Monospace</MenuItem>
+                            </Select>
+                        </div>
+                        <IconButton onClick={this.handleMenuOpen}>
+                            <GearSix />
+                        </IconButton>
+                        <Menu
+                            anchorEl={anchorEl}
+                            open={Boolean(anchorEl)}
+                            onClose={this.handleMenuClose}
+                        >
+                            <DropdownMenuItem onClick={this.resetGame}>
+                                <Button startIcon={<ArrowClockwise />} variant="contained">Reset Game</Button>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={this.saveGame}>
+                                <Button startIcon={<FloppyDisk />} variant="contained">Save Game</Button>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={this.loadGame}>
+                                <Button startIcon={<DownloadSimple />} variant="contained">Load Game</Button>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <FormControlLabel
+                                    control={<Switch checked={showPossibleMoves} onChange={this.handleShowPossibleMovesChange} />}
+                                    label="Show Possible Moves"
+                                />
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                                <FormControlLabel
+                                    control={<Switch checked={showNotation} onChange={this.handleShowNotationChange} />}
+                                    label="Show Piece Notation"
+                                />
+                            </DropdownMenuItem>
+                        </Menu>
+                    </div>
+                    {showTutorial && (
+                        <Suspense fallback={<div>Loading...</div>}>
+                            <ErrorBoundary>
+                                <Tutorial onClose={this.closeTutorial} />
+                            </ErrorBoundary>
+                        </Suspense>
+                    )}
+                    <div className="flex flex-col gap-4" style={{ height: 'calc(100% - 64px)' }}>
+                        <Suspense fallback={<div>Loading...</div>}>
+                            <ErrorBoundary>
+                                <GameStatus currentPlayer={game.turn()} gameStatus={gameStatus} />
+                            </ErrorBoundary>
+                        </Suspense>
+                        <div className="flex flex-col md:flex-row gap-4 justify-center items-center" style={{ height: '100%' }}>
+                            <Suspense fallback={<div>Loading...</div>}>
+                                <ErrorBoundary>
+                                    <ChessBoard
+                                        position={this.getBoardPosition()}
+                                        onMove={this.handleMove}
+                                        selectedSquare={selectedSquare}
+                                        possibleMoves={possibleMoves}
+                                        checkSquare={checkSquare}
+                                        theme={boardTheme}
+                                        pieceDesign={pieceDesign}
+                                        showPossibleMoves={showPossibleMoves}
+                                        lastMove={lastMove}
+                                        floatingCapture={floatingCapture}
+                                        showNotation={showNotation}
+                                        style={{ height: '100%' }}
+                                    />
+                                </ErrorBoundary>
+                            </Suspense>
+                        </div>
+                        <div className="flex flex-col gap-4" style={{ height: '100%' }}>
+                            <Suspense fallback={<div>Loading...</div>}>
+                                <ErrorBoundary>
+                                    <MaterialAdvantageBar advantage={materialAdvantage} />
+                                </ErrorBoundary>
+                            </Suspense>
+                            <Suspense fallback={<div>Loading...</div>}>
+                                <ErrorBoundary>
+                                    <CapturedPieces captured={capturedPieces} pieceDesign={pieceDesign} />
+                                </ErrorBoundary>
+                            </Suspense>
+                        </div>
+                    </div>
+                </Container>
+            </ErrorBoundary>
+        );
+    }
 }
 
-const root = createRoot(document.getElementById('root'));
-root.render(<App />);
-
-// Global error handler
-window.onerror = (message, source, lineno, colno, error) => {
-    logError({ message, source, lineno, colno, error });
+App.propTypes = {
+    game: PropTypes.object,
+    selectedSquare: PropTypes.string,
+    possibleMoves: PropTypes.array,
+    gameStatus: PropTypes.string,
+    checkSquare: PropTypes.string,
+    savedGame: PropTypes.object,
+    capturedPieces: PropTypes.object,
+    lastMove: PropTypes.object,
+    floatingCapture: PropTypes.object,
+    materialAdvantage: PropTypes.number,
+    getBoardPosition: PropTypes.func,
+    handleMove: PropTypes.func,
+    resetGame: PropTypes.func,
+    saveGame: PropTypes.func,
+    loadGame: PropTypes.func
 };
 
-// Global warning handler
-window.onwarning = (message, source, lineno, colno, warning) => {
-    logWarning({ message, source, lineno, colno, warning });
-};
+ReactDOM.render(<App />, document.getElementById('root'));

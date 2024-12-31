@@ -11,4 +11,4 @@ const GameStatus = ({ currentPlayer, gameStatus }) => {
         </Card>
     );
 };
-export { GameStatus };
+export default GameStatus;

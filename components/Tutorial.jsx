@@ -1,10 +1,11 @@
+import React from 'react';
+import { Dialog, DialogContent, DialogTitle, DialogActions, Button } from '@mui/material';
+
 const Tutorial = ({ onClose }) => (
-    <Dialog open={true} onOpenChange={onClose}>
+    <Dialog open={true} onClose={onClose}>
         <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Chess Game Tutorial</DialogTitle>
-            </DialogHeader>
-            <DialogDescription>
+            <DialogTitle>Chess Game Tutorial</DialogTitle>
+            <div>
                 <p>Welcome to the Chess Game!</p>
                 <p>Here are the basic rules and controls:</p>
                 <ul>
@@ -14,14 +15,14 @@ const Tutorial = ({ onClose }) => (
                     <li>The game ends in checkmate, stalemate, or draw.</li>
                     <li>Use the buttons to reset, save, or load the game.</li>
                 </ul>
-            </DialogDescription>
-            <DialogFooter>
-                <DialogClose asChild>
-                    <Button variant="primary">Start Game</Button>
-                </DialogClose>
-            </DialogFooter>
+            </div>
+            <DialogActions>
+                <Button onClick={onClose} variant="contained" color="primary">
+                    Start Game
+                </Button>
+            </DialogActions>
         </DialogContent>
     </Dialog>
 );
 
-export { Tutorial };
+export default Tutorial;

@@ -15,4 +15,4 @@ const MaterialAdvantageBar = ({ advantage }) => {
         </div>
     );
 };
-export { MaterialAdvantageBar };
+export default MaterialAdvantageBar;
