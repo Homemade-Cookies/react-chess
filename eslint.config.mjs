@@ -44,12 +44,19 @@ export default [
 
         settings: {
             react: {
-                version: 'detect',
+                version: '17.0',
             },
         },
 
         rules: {
             'prettier/prettier': 'error',
+            'no-console': 'warn', // Warn on console.log statements
+            'react/jsx-uses-react': 'error',
+            'react/jsx-uses-vars': 'error',
+            'react/prop-types': 'off', // Disable prop-types rule for React
+            'no-unused-vars': ['error', { argsIgnorePattern: '^_' }], // Ignore unused variables that start with _
+            eqeqeq: ['error', 'always'], // Enforce strict equality
+            curly: ['error', 'all'], // Enforce consistent brace style for all control statements
         },
 
         ignores: [
@@ -69,6 +76,7 @@ export default [
             '*.log',
             '*.txt',
             '*.tsbuildinfo',
+            'webpack.config.js',
         ],
     },
 ];
