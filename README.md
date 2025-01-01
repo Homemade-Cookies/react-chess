@@ -36,6 +36,18 @@ Here are some examples of how to use the project:
 - To toggle the display of possible moves, use the switch labeled "Show Possible Moves".
 - To toggle the display of piece notation, use the switch labeled "Show Piece Notation".
 
+## Screenshots
+
+![Screenshot 1](screenshots/screenshot1.png)
+![Screenshot 2](screenshots/screenshot2.png)
+
+## Running Tests
+
+To run the tests, use the following command:
+```sh
+npm test
+```
+
 ## Contribution Guidelines
 
 We welcome contributions from the community! To contribute, please follow these guidelines:
