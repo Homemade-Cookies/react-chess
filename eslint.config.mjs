@@ -51,5 +51,24 @@ export default [
         rules: {
             'prettier/prettier': 'error',
         },
+
+        ignores: [
+            'node_modules/',
+            'dist/',
+            'build/',
+            'coverage/',
+            'public/',
+            '*.config.js',
+            '*.config.ts',
+            '*.d.ts',
+            '*.json',
+            '*.md',
+            '*.yml',
+            '*.yaml',
+            '*.lock',
+            '*.log',
+            '*.txt',
+            '*.tsbuildinfo',
+        ],
     },
 ];
